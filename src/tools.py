@@ -771,7 +771,14 @@ class ToolExecutor:
 
 if __name__ == "__main__":
     # Verify tool counts
-    for domain, tools in DOMAIN_TOOLS.items():
-        print(f"{domain}: {len(tools)} tools")
-    print(f"Total unique tools: {sum(len(t) for t in DOMAIN_TOOLS.values())} + 1 answer tool")
-    print("ok")
+    # for domain, tools in DOMAIN_TOOLS.items():
+    #     print(f"{domain}: {len(tools)} tools")
+    # print(f"Total unique tools: {sum(len(t) for t in DOMAIN_TOOLS.values())} + 1 answer tool")
+    # print("ok")
+    tool_executor = ToolExecutor(mock_api_url="http://localhost:8000")
+    # Example test call
+    result = tool_executor.execute(
+        "movie_get_movie_info",
+        {"movie_name": "The Godfather"}
+    )
+    print(result)

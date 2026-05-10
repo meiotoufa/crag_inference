@@ -9,13 +9,14 @@ Scoring:
 
 Overall score = (2 * n_correct + n_miss) / n - 1
 """
+import asyncio
 import json
 import re
 import sys
 import os
 from typing import Dict, List, Tuple
 
-from openai import OpenAI, APIConnectionError, RateLimitError
+from openai import AsyncOpenAI, APIConnectionError, RateLimitError
 from loguru import logger
 
 # Import evaluation prompts from the original CRAG repo
@@ -57,8 +58,8 @@ def parse_response(response: str) -> Tuple[str, int]:
         return str(e), -1
 
 
-def evaluate_single(
-    client: OpenAI,
+async def evaluate_single(
+    client: AsyncOpenAI,
     model_name: str,
     query: str,
     ground_truth: str,
@@ -104,7 +105,7 @@ def evaluate_single(
 
     for _ in range(max_retries):
         try:
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=model_name,
                 messages=messages,
                 response_format={"type": "json_object"},
@@ -122,7 +123,23 @@ def evaluate_single(
     return -1
 
 
-def evaluate_topic_results(
+async def evaluate_batch(
+    client: AsyncOpenAI,
+    model_name: str,
+    queries: List[str],
+    ground_truths: List[str],
+    predictions: List[str],
+    system_message: str,
+) -> List[int]:
+    """Evaluate a batch of predictions concurrently."""
+    tasks = [
+        evaluate_single(client, model_name, q, gt, pred, system_message)
+        for q, gt, pred in zip(queries, ground_truths, predictions)
+    ]
+    return await asyncio.gather(*tasks)
+
+
+async def evaluate_topic_results_async(
     topic: str,
     queries: List[str],
     ground_truths: List[str],
@@ -130,7 +147,7 @@ def evaluate_topic_results(
     config: dict,
 ) -> Dict:
     """
-    Evaluate all predictions for one topic.
+    Evaluate all predictions for one topic using async batch parallelism.
 
     Returns dict with score, accuracy, hallucination_rate, missing_rate, counts.
     """
@@ -143,27 +160,16 @@ def evaluate_topic_results(
     if eval_config.get("api_key"):
         client_kwargs["api_key"] = eval_config["api_key"]
 
-    client = OpenAI(**client_kwargs)
+    client = AsyncOpenAI(**client_kwargs)
     system_message = get_system_message()
 
-    n_correct = 0
-    n_miss = 0
-    n_hallucination = 0
+    scores = await evaluate_batch(
+        client, model_name, queries, ground_truths, predictions, system_message
+    )
 
-    for i, prediction in enumerate(predictions):
-        query = queries[i]
-        ground_truth = ground_truths[i]
-
-        score = evaluate_single(
-            client, model_name, query, ground_truth, prediction, system_message
-        )
-
-        if score == -2:
-            n_miss += 1
-        elif score == 1:
-            n_correct += 1
-        else:
-            n_hallucination += 1
+    n_correct = sum(1 for s in scores if s == 1)
+    n_miss = sum(1 for s in scores if s == -2)
+    n_hallucination = sum(1 for s in scores if s not in (1, -2))
 
     n = len(predictions)
     overall_score = (2 * n_correct + n_miss) / n - 1 if n > 0 else 0
@@ -179,3 +185,16 @@ def evaluate_topic_results(
         "n_hallucination": n_hallucination,
         "total": n,
     }
+
+
+def evaluate_topic_results(
+    topic: str,
+    queries: List[str],
+    ground_truths: List[str],
+    predictions: List[str],
+    config: dict,
+) -> Dict:
+    """Sync wrapper for evaluate_topic_results_async."""
+    return asyncio.run(
+        evaluate_topic_results_async(topic, queries, ground_truths, predictions, config)
+    )

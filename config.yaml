@@ -1,0 +1,50 @@
+# CRAG Evaluation Framework Configuration
+
+# Model served by vLLM
+model:
+  name: "Qwen/Qwen2.5-72B-Instruct"
+  base_url: "http://localhost:9000/v1"
+  api_key: "EMPTY"
+  temperature: 0.1
+  top_p: 0.9
+  max_tokens: 4096
+
+# Evaluation model (GPT-4 judge)
+eval_model:
+  name: "DeepSeek-R1"
+  base_url: "https://maas.devops.xiaohongshu.com/dqainferencecqs-deepseekr1-gzh/v1"
+  api_key: "QST0bf60ba2e21c62c0c4f21aa8ca5a97b1"  # reads from OPENAI_API_KEY env var
+
+# Inference control
+inference:
+  max_turns: 10
+  batch_concurrency: 8
+  timeout_per_turn: 60
+
+# CRAG Mock API server
+mock_api:
+  base_url: "http://localhost:8000"
+
+# Data paths (relative to template/)
+data:
+  input_path: "data/processed/"
+  raw_path: "data/raw/"
+  train_test_path: "data/train_test/"
+
+# Topics (domains) to evaluate
+topics:
+  - finance
+  - movie
+  - music
+  - sports
+  - open
+
+# Output paths (relative to template/)
+output:
+  results_dir: "results/test_results/"
+  statistics_dir: "results/statistic/"
+
+# Logging
+logging:
+  level: "INFO"
+  file: "results/eval.log"

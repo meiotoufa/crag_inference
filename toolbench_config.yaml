@@ -1,0 +1,49 @@
+# ToolBench Evaluation Framework Configuration
+
+# Model served by vLLM
+model:
+  name: "Qwen/Qwen2.5-72B-Instruct"
+  base_url: "http://localhost:9000/v1"
+  api_key: "EMPTY"
+  temperature: 0.1
+  top_p: 0.9
+  max_tokens: 4096
+
+# Evaluation model (judge for pass rate)
+eval_model:
+  name: "DeepSeek-R1"
+  base_url: "https://maas.devops.xiaohongshu.com/dqainferencecqs-deepseekr1-gzh/v1"
+  api_key: "QST0bf60ba2e21c62c0c4f21aa8ca5a97b1"
+
+# Inference control
+inference:
+  max_turns: 12
+  batch_concurrency: 8
+  timeout_per_turn: 120
+
+# ToolBench tool server (simulated API responses)
+# If use_simulated=true, tools return mock responses; otherwise call real RapidAPI
+tool_server:
+  use_simulated: true
+  rapidapi_key: ""  # Fill if use_simulated=false
+
+# Data paths
+data:
+  input_path: "data/toolbench/processed/"
+  raw_path: "data/toolbench/raw/"
+
+# Evaluation splits to run
+splits:
+  - g1_instruction
+  - g1_category
+  - g1_tool
+
+# Output paths
+output:
+  results_dir: "results/toolbench_results/"
+  statistics_dir: "results/toolbench_stats/"
+
+# Logging
+logging:
+  level: "INFO"
+  file: "results/toolbench_eval.log"
